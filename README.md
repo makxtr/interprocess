@@ -17,20 +17,16 @@ An example of **parallel data processing** with task distribution among several 
 - Processes the task: multiplies each number by 2 with a random delay (1-10 seconds)
 - Sends the result back to the server
 
-## Requirements
-
-- Node.js (version 12 or higher)
-
 ## How to Run
 
 1. Start the server:
 ```bash
-node server.js
+node server
 ```
 
 2. In a separate terminal, start the clients:
 ```bash
-node client.js
+node client
 ```
 
 ## Example Output

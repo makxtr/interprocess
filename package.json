@@ -1,0 +1,18 @@
+{
+  "name": "interprocess",
+  "version": "1.0.0",
+  "description": "Interprocess communication example",
+  "type": "module",
+  "main": "js/server.js",
+  "scripts": {
+    "server": "node js/server.js",
+    "client": "node js/client.js"
+  },
+  "keywords": [
+    "net",
+    "socket",
+    "interprocess"
+  ],
+  "author": "",
+  "license": "ISC"
+}
