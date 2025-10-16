@@ -13,22 +13,34 @@ defmodule Interprocess.Server do
         reuseaddr: true
       ])
 
+    data = [2, 17, 3, 2, 5, 7, 15, 22, 1, 14, 15, 9, 0, 11]
+    step = 4
+    chunks = Enum.chunk_every(data, step)
+
     Logger.info("Server started on port #{port}")
-    accept_loop(socket)
+    accept_loop(socket, chunks)
   end
 
-  defp accept_loop(socket) do
+  defp accept_loop(socket, [chunk | rest]) do
     {:ok, client} = :gen_tcp.accept(socket)
     Logger.info("Accepted connection from #{inspect(client)}")
-    spawn_link(fn -> handle_client(client) end)
-    accept_loop(socket)
+    spawn_link(fn -> handle_client(client, chunk) end)
+    accept_loop(socket, rest)
   end
 
-  defp handle_client(client) do
+  defp accept_loop(socket, []) do
+    {:ok, client} = :gen_tcp.accept(socket)
+    Logger.warning("No more chunks available")
+    :gen_tcp.send(client, "NO_DATA")
+    :gen_tcp.close(client)
+    accept_loop(socket, [])
+  end
+
+  defp handle_client(client, chunk) do
     case :gen_tcp.recv(client, 0) do
       {:ok, data} ->
         Logger.info("Received data: #{inspect(data)}")
-        :gen_tcp.send(client, "OK")
+        :gen_tcp.send(client, :erlang.term_to_binary(chunk))
 
       {:error, reason} ->
         Logger.error("Error receiving data: #{inspect(reason)}")
