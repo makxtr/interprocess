@@ -20,6 +20,10 @@ defmodule Interprocess.Client do
         task = :erlang.binary_to_term(chunk)
         IO.puts("Received task: #{inspect(task)}")
 
+        delay = :rand.uniform(10) * 1000
+        IO.puts("Working for #{delay} ms...")
+        :timer.sleep(delay)
+
         solution = Enum.map(task, fn x -> x * 2 end)
         IO.puts("Sending solution: #{inspect(solution)}")
 

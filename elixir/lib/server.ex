@@ -107,7 +107,7 @@ defmodule Interprocess.Server do
 
     case :gen_tcp.recv(client, 0) do
       {:ok, solution} ->
-        Logger.info("Received solution: #{inspect(solution)}")
+        Logger.info("Received solution: #{inspect(client)}")
 
         result = %{get: counter, data: :erlang.binary_to_term(solution)}
         send(state_pid, {:add_result, result, self()})
@@ -129,12 +129,12 @@ defmodule Interprocess.Server do
         tasks_length = length(state.tasks)
         conn_length = length(state.connections)
 
-        Logger.info("Closed connection. Remaining tasks: #{tasks_length}")
-
         all_done = conn_length == 0 and tasks_length == 0
 
         if all_done do
           Logger.info("All done!")
+
+          Logger.info("#{inspect(state.results)}")
 
           finish =
             state.results
