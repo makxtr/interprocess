@@ -1,9 +1,14 @@
 defmodule Interprocess.Server do
   require Logger
 
+  @def_port 2000
+
   @doc """
-  Starts the server on the given port.
+  Send tasks for clients by chunks
+  and awaits results from them.
   """
+  def start(port \\ @def_port)
+
   def start(port) do
     {:ok, socket} =
       :gen_tcp.listen(port, [
@@ -54,10 +59,15 @@ defmodule Interprocess.Server do
         state_loop(%{state | counter: state.counter + 1})
 
       {:next_task, from} ->
-        [task | rest_tasks] = state.tasks
+        case state.tasks do
+          [task | rest_tasks] ->
+            send(from, {:task, task})
+            state_loop(%{state | tasks: rest_tasks})
 
-        send(from, {:task, task})
-        state_loop(%{state | tasks: rest_tasks})
+          [] ->
+            send(from, {:no_tasks})
+            state_loop(state)
+        end
     end
   end
 
@@ -67,35 +77,30 @@ defmodule Interprocess.Server do
 
     send(state_pid, {:next_task, self()})
 
-    task =
-      receive do
-        {:task, t} -> t
-      end
-
-    send(state_pid, {:get_counter, self()})
-
-    counter =
-      receive do
-        {:counter, c} -> c
-      end
-
-    send(state_pid, {:add_connection, client, counter, self()})
-
     receive do
-      :ok -> :ok
+      {:task, task} ->
+        send(state_pid, {:get_counter, self()})
+
+        counter =
+          receive do
+            {:counter, c} -> c
+          end
+
+        send(state_pid, {:add_connection, client, counter, self()})
+
+        receive do
+          :ok -> :ok
+        end
+
+        spawn_link(fn -> handle_client(client, task, counter, state_pid) end)
+
+      {:no_tasks} ->
+        Logger.warning("No tasks available, closing connection")
+        :gen_tcp.close(client)
     end
 
-    spawn_link(fn -> handle_client(client, task, counter, state_pid) end)
     accept_loop(socket, state_pid)
   end
-
-  # defp accept_loop(socket, [], state_pid) do
-  #   {:ok, client} = :gen_tcp.accept(socket)
-  #   Logger.warning("No more chunks available")
-  #   :gen_tcp.send(client, :erlang.term_to_binary("NO_DATA"))
-  #   :gen_tcp.close(client)
-  #   accept_loop(socket, [], state_pid)
-  # end
 
   defp handle_client(client, task, counter, state_pid) do
     :gen_tcp.send(client, :erlang.term_to_binary(task))
@@ -121,11 +126,14 @@ defmodule Interprocess.Server do
 
     receive do
       {:ok, state} ->
-        Logger.info("Closed connection. Remaining: #{length(state.connections)}")
+        tasks_length = length(state.tasks)
+        conn_length = length(state.connections)
 
-        all_done = Enum.all?(state.connections, fn c -> c.done end)
+        Logger.info("Closed connection. Remaining tasks: #{tasks_length}")
 
-        if all_done and length(state.connections) == 0 do
+        all_done = conn_length == 0 and tasks_length == 0
+
+        if all_done do
           Logger.info("All done!")
 
           finish =
@@ -134,6 +142,8 @@ defmodule Interprocess.Server do
             |> Enum.flat_map(fn r -> r.data end)
 
           Logger.info("Final results: #{inspect(finish)}")
+
+          System.stop(0)
         end
     end
   end

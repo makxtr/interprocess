@@ -14,41 +14,40 @@ const gen = function* (array, step) {
   }
 };
 
-const check = (client) => client.done === false;
-
 const iterator = gen(task, step);
 let get = 0;
 
+const totalTasks = Math.ceil(task.length / step);
+let tasksGiven = 0;
+
 const server = net.createServer((socket) => {
   console.dir({ Connected: socket.remotePort });
-  const client = { socket, done: false, get: get++ };
+  const client = { socket, get: get++ };
 
   connections.push(client);
-  const message = Buffer.from(iterator.next().value || []);
+  const nextTask = iterator.next();
 
-  socket.write(message);
+  const hasTask = nextTask.value && nextTask.value.length > 0 && !nextTask.done;
 
-  socket.on("data", (data) => {
-    console.log(`From ${socket.remotePort}`, data);
+  if (hasTask) {
+    tasksGiven++;
+    socket.write(Buffer.from(nextTask.value));
 
-    results.push({ get: client.get, data: Array.from(data) });
-
-    client.done = true;
-    console.log(client.get);
-
-    socket.end();
-  });
+    socket.on("data", (data) => {
+      console.log(`From ${socket.remotePort}`, data);
+      results.push({ get: client.get, data: Array.from(data) });
+      console.log(client.get);
+      socket.end();
+    });
+  }
 
   socket.on("close", () => {
-    const index = connections.findIndex((conn) => {
-      return conn.socket.remotePort === socket.remotePort;
-    });
-
+    const index = connections.findIndex((c) => c.socket === socket);
     if (index !== -1) connections.splice(index, 1);
 
     console.log(`Closed ${socket.remotePort}`);
 
-    if (!connections.some(check)) {
+    if (connections.length === 0 && tasksGiven >= totalTasks) {
       console.log("all done!");
       console.dir(results, { depth: null });
 
@@ -57,12 +56,15 @@ const server = net.createServer((socket) => {
         .reduce((acc, obj) => [...acc, ...obj.data], []);
 
       console.dir(finish, { depth: null });
-
       server.unref();
 
       console.dir({ connections });
     }
   });
+
+  if (!hasTask) {
+    socket.end();
+  }
 });
 
 server.listen(2000);
