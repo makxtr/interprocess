@@ -79,10 +79,9 @@ func runClient(id int, wg *sync.WaitGroup) {
 func main() {
 	var wg sync.WaitGroup
 
+	wg.Add(numClients)
 	for i := 0; i < numClients; i++ {
-		wg.Add(1)
 		go runClient(i+1, &wg)
-		time.Sleep(100 * time.Millisecond)
 	}
 
 	wg.Wait()
