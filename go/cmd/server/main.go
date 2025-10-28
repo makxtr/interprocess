@@ -76,7 +76,7 @@ func (s *Server) handleClient(conn net.Conn) {
 
 	if err := binary.Write(conn, binary.BigEndian, uint32(len(task.Data))); err != nil {
 		log.Printf("Error sending task length: %v", err)
-		s.taskChan <- task
+		//s.taskChan <- task // panic channel is closed
 		return
 	}
 
