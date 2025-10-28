@@ -119,9 +119,15 @@ func (s *Server) collectResults() {
 		return results[i].ID < results[j].ID
 	})
 
-	finish := make([]byte, 0)
+	totalSize := 0
 	for _, r := range results {
-		finish = append(finish, r.Data...)
+    	totalSize += len(r.Data)
+	}
+	finish := make([]byte, totalSize)
+	offset := 0
+	for _, r := range results {
+    	copy(finish[offset:], r.Data)
+    	offset += len(r.Data)
 	}
 
 	log.Printf("Final results: %v", finish)
@@ -140,22 +146,17 @@ func (s *Server) Start() {
 
 	go func() {
 		for {
-			select {
-			case <-s.doneChan:
-				return
-			default:
-				conn, err := listener.Accept()
-				if err != nil {
-					select {
-					case <-s.doneChan:
-						return
-					default:
-						log.Printf("Error accepting connection: %v", err)
-						continue
-					}
+			conn, err := listener.Accept()
+			if err != nil {
+				select {
+				case <-s.doneChan:
+					return
+				default:
+					log.Printf("Error accepting connection: %v", err)
+					continue
 				}
-				go s.handleClient(conn)
 			}
+			go s.handleClient(conn)
 		}
 	}()
 
