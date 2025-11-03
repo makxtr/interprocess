@@ -113,10 +113,10 @@ defmodule Interprocess.Server do
 
       Logger.info("Final results: #{inspect(finish)}")
 
-      System.stop(0)
+      {:stop, :normal, state}
+    else
+      {:noreply, state}
     end
-
-    {:noreply, state}
   end
 
   defp accept_loop(socket) do
