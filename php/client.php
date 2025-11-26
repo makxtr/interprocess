@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Swoole\Coroutine;
 use Swoole\Coroutine\Client;
 

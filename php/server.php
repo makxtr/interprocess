@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use Swoole\Server;
 
 const STEP = 4;

@@ -3,3 +3,6 @@ run-server:
 
 run-client:
 	docker run --rm --network host -v $(PWD):/app -w /app swoole-server php client.php
+
+build:
+	docker build -t swoole-server .

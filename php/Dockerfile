@@ -5,6 +5,9 @@ RUN apt-get update && apt-get install -y \
     libbrotli-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Install sockets extension
+RUN docker-php-ext-install sockets
+
 # Install Swoole
 RUN pecl install swoole \
     && docker-php-ext-enable swoole
